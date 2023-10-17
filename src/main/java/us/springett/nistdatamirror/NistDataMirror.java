@@ -16,22 +16,8 @@
 
 package us.springett.nistdatamirror;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.Closeable;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
-import java.net.Authenticator;
-import java.net.PasswordAuthentication;
-import java.net.Proxy;
-import java.net.URL;
-import java.net.URLConnection;
+import java.io.*;
+import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -39,11 +25,7 @@ import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.ZonedDateTime;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -243,7 +225,7 @@ public class NistDataMirror {
             bis = new BufferedInputStream(connection.getInputStream());
             file = new File(outputDir, filename);
             bos = new BufferedOutputStream(new FileOutputStream(file));
-           
+
             int i;
             while ((i = bis.read()) != -1) {
                 bos.write(i);
@@ -278,6 +260,7 @@ public class NistDataMirror {
             }
             System.out.println("Uncompressed " + outputFile.getName());
         } catch (IOException ex) {
+            downloadFailed = true;
             ex.printStackTrace();
         } finally {
             close(gzis);
@@ -316,14 +299,14 @@ public class NistDataMirror {
             return metaHash.equals(hex);
         } catch (IOException | NoSuchAlgorithmException ex) {
             ex.printStackTrace();
+            return false;
         }
-        return null;
     }
 
     private static String checksum(String filepath, MessageDigest md) throws IOException {
 
         // file hashing with DigestInputStream
-        try ( DigestInputStream dis = new DigestInputStream(new BufferedInputStream(new FileInputStream(filepath)), md)) {
+        try (DigestInputStream dis = new DigestInputStream(new BufferedInputStream(new FileInputStream(filepath)), md)) {
             // read and discard all data, causing the message digest to be calculated.
             int character;
             do {
