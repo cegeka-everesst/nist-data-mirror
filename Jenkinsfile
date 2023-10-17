@@ -2,4 +2,5 @@
 LibraryPipeline {
     failWhenProjectDoesNotPassSonarQualityGate = 'false'
     jdkVersion = '17'
+    cucumberEnabled = 'false'
 }
