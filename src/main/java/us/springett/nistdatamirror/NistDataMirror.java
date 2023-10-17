@@ -175,6 +175,7 @@ public class NistDataMirror {
             System.err.println("Error mirroring the NVD CVE data");
             ex.printStackTrace(System.err);
         } catch (Exception e) {
+            downloadFailed = true;
             e.printStackTrace();
         }
     }
