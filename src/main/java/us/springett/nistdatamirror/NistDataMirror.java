@@ -237,12 +237,10 @@ public class NistDataMirror {
         }
         BufferedInputStream bis = null;
         BufferedOutputStream bos = null;
-        File file = null;
-        boolean success = false;
+        File file;
         try {
             String filename = url.getFile();
             filename = filename.substring(filename.lastIndexOf('/') + 1);
-            file = new File(outputDir, filename).getAbsoluteFile();
 
             URLConnection connection = url.openConnection(proxy);
             System.out.println("Downloading " + url.toExternalForm());
@@ -254,23 +252,21 @@ public class NistDataMirror {
             while ((i = bis.read()) != -1) {
                 bos.write(i);
             }
-            success = true;
-        } catch (IOException e) {
-            System.out.println("Download failed : " + e.getLocalizedMessage());
-            downloadFailed = true;
-        } finally {
-            close(bis);
-            close(bos);
-        }
-        if (file != null && success) {
             System.out.println("Download succeeded " + file.getName());
             if (file.getName().endsWith(".gz")) {
                 uncompress(file);
             }
+        } catch (IOException e) {
+            System.out.println("Download failed : " + e.getLocalizedMessage());
+            downloadFailed = true;
+            throw new MirrorException("Download failed : " + e.getLocalizedMessage(), e);
+        } finally {
+            close(bis);
+            close(bos);
         }
     }
 
-    private void uncompress(File file) {
+    private void uncompress(File file) throws IOException {
         byte[] buffer = new byte[1024];
         InputStream gzis = null;
         OutputStream out = null;
@@ -285,7 +281,7 @@ public class NistDataMirror {
             System.out.println("Uncompressed " + outputFile.getName());
         } catch (IOException ex) {
             downloadFailed = true;
-            ex.printStackTrace();
+            throw ex;
         } finally {
             close(gzis);
             close(out);
