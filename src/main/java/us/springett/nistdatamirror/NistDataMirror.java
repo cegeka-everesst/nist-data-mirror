@@ -252,10 +252,6 @@ public class NistDataMirror {
             while ((i = bis.read()) != -1) {
                 bos.write(i);
             }
-            System.out.println("Download succeeded " + file.getName());
-            if (file.getName().endsWith(".gz")) {
-                uncompress(file);
-            }
         } catch (IOException e) {
             System.out.println("Download failed : " + e.getLocalizedMessage());
             downloadFailed = true;
@@ -263,6 +259,14 @@ public class NistDataMirror {
         } finally {
             close(bis);
             close(bos);
+        }
+        System.out.println("Download succeeded " + file.getName());
+        if (file.getName().endsWith(".gz")) {
+            try {
+                uncompress(file);
+            } catch (IOException e) {
+                throw new MirrorException("Uncompression failed: " + e.getLocalizedMessage(), e);
+            }
         }
     }
 
@@ -281,7 +285,7 @@ public class NistDataMirror {
             System.out.println("Uncompressed " + outputFile.getName());
         } catch (IOException ex) {
             downloadFailed = true;
-            throw new IOException("Could not uncompress "+file.getName(), ex);
+            throw new IOException("Could not uncompress " + file.getName(), ex);
         } finally {
             close(gzis);
             close(out);
