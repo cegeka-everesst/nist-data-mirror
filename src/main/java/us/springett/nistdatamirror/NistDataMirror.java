@@ -168,17 +168,9 @@ public class NistDataMirror {
                 Boolean valid = validCheck(year);
                 System.out.println("File " + year + " is valid.");
                 if (Boolean.FALSE.equals(valid)) {
-                    int i = 0;
-                    while (i < 2) {
-                        downloadVersionForYear(version, year);
-                        Boolean valid2 = validCheck(year);
-                        i++;
-                        if (Boolean.TRUE.equals(valid2)) {
-                            System.out.println("File " + year + " is valid.");
-                            break;
-                        }
+                    if (!retryDownload(version, year)) {
+                        throw new Exception("The File " + year + " is corrupted");
                     }
-                    System.out.println("The File " + year + " is corrupted");
                 }
             }
 
@@ -190,6 +182,20 @@ public class NistDataMirror {
             downloadFailed = true;
             e.printStackTrace();
         }
+    }
+
+    private boolean retryDownload(String version, int year) throws MirrorException {
+        int i = 0;
+        while (i < 2) {
+            downloadVersionForYear(version, year);
+            Boolean valid2 = validCheck(year);
+            i++;
+            if (Boolean.TRUE.equals(valid2)) {
+                System.out.println("File " + year + " is valid.");
+                return true;
+            }
+        }
+        return false;
     }
 
     private void downloadVersionForYear(String version, int year) throws MirrorException {
