@@ -248,15 +248,9 @@ public class NistDataMirror {
             file = new File(outputDir, filename);
             bos = new BufferedOutputStream(new FileOutputStream(file));
 
-            long contentLength = connection.getContentLengthLong();
             int i;
-            long bytesRead = 0;
             while ((i = bis.read()) != -1) {
-                bytesRead += i;
                 bos.write(i);
-            }
-            if(contentLength > 0 && bytesRead != contentLength) {
-                throw new IOException("Content length mismatch: " + contentLength+" but only " + bytesRead+" bytes read");
             }
             System.out.println("Download succeeded " + file.getName());
             if (file.getName().endsWith(".gz")) {
