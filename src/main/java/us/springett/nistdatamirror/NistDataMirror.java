@@ -275,13 +275,13 @@ public class NistDataMirror {
             gzis = new GZIPInputStream(new BufferedInputStream(new FileInputStream(file)));
             out = new BufferedOutputStream(new FileOutputStream(outputFile));
             int len;
-            while ((len = gzis.read(buffer)) > 0) {
+            while ((len = gzis.read(buffer)) != -1) {
                 out.write(buffer, 0, len);
             }
             System.out.println("Uncompressed " + outputFile.getName());
         } catch (IOException ex) {
             downloadFailed = true;
-            throw ex;
+            throw new IOException("Could not uncompress "+file.getName(), ex);
         } finally {
             close(gzis);
             close(out);
