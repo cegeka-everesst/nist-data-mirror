@@ -42,6 +42,7 @@ import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
@@ -165,9 +166,9 @@ public class NistDataMirror {
             }
             for (int year = START_YEAR; year <= END_YEAR; year++) {
                 downloadVersionForYear(version, year);
-                Boolean valid = validCheck(year);
+                boolean valid = validCheck(year);
                 System.out.println("File " + year + " is valid.");
-                if (Boolean.FALSE.equals(valid)) {
+                if (!valid) {
                     if (!retryDownload(version, year)) {
                         throw new Exception("The File " + year + " is corrupted");
                     }
@@ -188,9 +189,8 @@ public class NistDataMirror {
         int i = 0;
         while (i < 2) {
             downloadVersionForYear(version, year);
-            Boolean valid2 = validCheck(year);
             i++;
-            if (Boolean.TRUE.equals(valid2)) {
+            if (validCheck(year)) {
                 System.out.println("File " + year + " is valid.");
                 return true;
             }
@@ -248,9 +248,15 @@ public class NistDataMirror {
             file = new File(outputDir, filename);
             bos = new BufferedOutputStream(new FileOutputStream(file));
 
+            long contentLength = connection.getContentLengthLong();
             int i;
+            long bytesRead = 0;
             while ((i = bis.read()) != -1) {
+                bytesRead += i;
                 bos.write(i);
+            }
+            if(contentLength > 0 && bytesRead != contentLength) {
+                throw new IOException("Content length mismatch: " + contentLength+" but only " + bytesRead+" bytes read");
             }
             System.out.println("Download succeeded " + file.getName());
             if (file.getName().endsWith(".gz")) {
@@ -305,18 +311,26 @@ public class NistDataMirror {
      * @param year four digit year to use
      * @return true or false
      */
-    private Boolean validCheck(int year) {
+    private boolean validCheck(int year) {
         try {
             Path metaFilePath = Paths.get(String.valueOf(outputDir), "nvdcve-1.1-" + year + ".meta");
-            int n = 4; // The line number where the hash is saved in the meta file
-            String hashLine = Files.readAllLines(Paths.get(String.valueOf(metaFilePath))).get(n);
+            List<String> lines = Files.readAllLines(Paths.get(String.valueOf(metaFilePath)));
+
+            String sizeLine = lines.get(1);
+            long size = Long.parseLong(sizeLine.substring(5));
+            String gzLine = lines.get(3);
+            long gzSize = Long.parseLong(gzLine.substring(7));
+            Path gzFilePath = Paths.get(String.valueOf(outputDir), "nvdcve-1.1-" + year + ".json.gz");
+            String hashLine = lines.get(4);
             String metaHash = hashLine.substring(7);
 
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             Path jsonFilePath = Paths.get(String.valueOf(outputDir), "nvdcve-1.1-" + year + ".json");
             String hex = checksum(String.valueOf(jsonFilePath), md);
 
-            return metaHash.equals(hex);
+            return gzFilePath.toFile().length() == gzSize
+                    && jsonFilePath.toFile().length() == size
+                    && metaHash.equals(hex);
         } catch (IOException | NoSuchAlgorithmException ex) {
             ex.printStackTrace();
             return false;
