@@ -166,15 +166,15 @@ public class NistDataMirror {
             }
             for (int year = START_YEAR; year <= END_YEAR; year++) {
                 downloadVersionForYear(version, year);
-                Boolean valid = validCheck(year);
+                boolean valid = validCheck(year);
                 System.out.println("File " + year + " is valid.");
-                if (Boolean.FALSE.equals(valid)) {
+                if (!valid) {
                     int i = 0;
                     while (i < 2) {
                         downloadVersionForYear(version, year);
-                        Boolean valid2 = validCheck(year);
+                        boolean valid2 = validCheck(year);
                         i++;
-                        if (Boolean.TRUE.equals(valid2)) {
+                        if (valid2) {
                             System.out.println("File " + year + " is valid.");
                             break;
                         }
@@ -302,7 +302,7 @@ public class NistDataMirror {
      * @param year four digit year to use
      * @return true or false
      */
-    private Boolean validCheck(int year) {
+    private boolean validCheck(int year) {
         try {
             Path metaFilePath = Paths.get(String.valueOf(outputDir), "nvdcve-1.1-" + year + ".meta");
             int n = 4; // The line number where the hash is saved in the meta file
@@ -317,7 +317,7 @@ public class NistDataMirror {
         } catch (IOException | NoSuchAlgorithmException ex) {
             ex.printStackTrace();
         }
-        return null;
+        return false;
     }
 
     private static String checksum(String filepath, MessageDigest md) throws IOException {
