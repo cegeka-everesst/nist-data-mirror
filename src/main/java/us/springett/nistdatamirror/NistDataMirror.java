@@ -13,13 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package us.springett.nistdatamirror;
 
-
-import java.io.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Authenticator;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
-import java.net.Authenticator;
 import java.net.PasswordAuthentication;
 import java.net.Proxy;
 import java.net.URL;
@@ -31,7 +39,11 @@ import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -153,15 +165,15 @@ public class NistDataMirror {
             }
             for (int year = START_YEAR; year <= END_YEAR; year++) {
                 downloadVersionForYear(version, year);
-                Boolean valid = validCheck(year);
+                boolean valid = validCheck(year);
                 System.out.println("File " + year + " is valid.");
-                if (Boolean.FALSE.equals(valid)) {
+                if (!valid) {
                     int i = 0;
                     while (i < 2) {
                         downloadVersionForYear(version, year);
-                        Boolean valid2 = validCheck(year);
+                        boolean valid2 = validCheck(year);
                         i++;
-                        if (Boolean.TRUE.equals(valid2)) {
+                        if (valid2) {
                             System.out.println("File " + year + " is valid.");
                             break;
                         }
@@ -218,12 +230,10 @@ public class NistDataMirror {
         }
         BufferedInputStream bis = null;
         BufferedOutputStream bos = null;
-        File file = null;
-        boolean success = false;
+        File file;
         try {
             String filename = url.getFile();
             filename = filename.substring(filename.lastIndexOf('/') + 1);
-            file = new File(outputDir, filename).getAbsoluteFile();
 
             URLConnection connection = url.openConnection(proxy);
             System.out.println("Downloading " + url.toExternalForm());
@@ -235,23 +245,23 @@ public class NistDataMirror {
             while ((i = bis.read()) != -1) {
                 bos.write(i);
             }
-            success = true;
         } catch (IOException e) {
-            System.out.println("Download failed : " + e.getLocalizedMessage());
-            downloadFailed = true;
+            throw new MirrorException("Download failed : " + e.getLocalizedMessage(), e);
         } finally {
             close(bis);
             close(bos);
         }
-        if (file != null && success) {
-            System.out.println("Download succeeded " + file.getName());
-            if (file.getName().endsWith(".gz")) {
+        System.out.println("Download succeeded " + file.getName());
+        if (file.getName().endsWith(".gz")) {
+            try {
                 uncompress(file);
+            } catch (IOException e) {
+                throw new MirrorException("Uncompression failed: " + e.getLocalizedMessage(), e);
             }
         }
     }
 
-    private void uncompress(File file) {
+    private void uncompress(File file) throws IOException {
         byte[] buffer = new byte[1024];
         InputStream gzis = null;
         OutputStream out = null;
@@ -260,12 +270,10 @@ public class NistDataMirror {
             gzis = new GZIPInputStream(new BufferedInputStream(new FileInputStream(file)));
             out = new BufferedOutputStream(new FileOutputStream(outputFile));
             int len;
-            while ((len = gzis.read(buffer)) > 0) {
+            while ((len = gzis.read(buffer)) != -1) {
                 out.write(buffer, 0, len);
             }
             System.out.println("Uncompressed " + outputFile.getName());
-        } catch (IOException ex) {
-            ex.printStackTrace();
         } finally {
             close(gzis);
             close(out);
@@ -289,7 +297,7 @@ public class NistDataMirror {
      * @param year four digit year to use
      * @return true or false
      */
-    private Boolean validCheck(int year) {
+    private boolean validCheck(int year) {
         try {
             Path metaFilePath = Paths.get(String.valueOf(outputDir), "nvdcve-1.1-" + year + ".meta");
             int n = 4; // The line number where the hash is saved in the meta file
@@ -304,7 +312,7 @@ public class NistDataMirror {
         } catch (IOException | NoSuchAlgorithmException ex) {
             ex.printStackTrace();
         }
-        return null;
+        return false;
     }
 
     private static String checksum(String filepath, MessageDigest md) throws IOException {
